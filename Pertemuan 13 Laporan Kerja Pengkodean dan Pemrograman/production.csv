@@ -1,6 +1,0 @@
-production_id,product_id,product_name,production_date,quantity_produced,production_cost
-1,PROD001,Beras Premium,2025-01-10,1000,12000.50
-2,PROD002,Minyak Goreng,2025-01-15,500,15000.75
-3,PROD003,Gula Pasir,2025-02-01,800,13000.25
-4,PROD001,Beras Premium,2025-02-10,1200,12200.00
-5,PROD004,Tepung Terigu,2025-02-15,600,9000.30
