@@ -1,0 +1,71 @@
+-- 1. Analisis Total Nilai Persediaan Farmasi
+SELECT 
+  Nama_Obat,
+  SUM(Jumlah_Unit) AS Total_Unit,
+  SUM(Total_Harga_Pokok) AS Total_Nilai_Persediaan,
+  SUM(Total_Harga_Jual_Potensial) AS Total_Potensi_Pendapatan,
+  ROUND(SUM(Total_Harga_Jual_Potensial) - SUM(Total_Harga_Pokok), 2) AS Potensi_Keuntungan
+FROM `pharmacy_dataset.persediaan_farmasi_2023`
+GROUP BY Nama_Obat
+ORDER BY Total_Nilai_Persediaan DESC;
+
+-- 2. Analisis Pemakaian Obat Rawat Inap per Ruangan
+SELECT 
+  Kode_Ruangan,
+  Nama_Obat,
+  SUM(Jumlah_Unit) AS Total_Unit_Digunakan,
+  SUM(Total_Harga_Pokok) AS Total_Biaya_Pemakaian
+FROM `pharmacy_dataset.pemakaian_obat_rawat_inap_2023`
+GROUP BY Kode_Ruangan, Nama_Obat
+ORDER BY Total_Biaya_Pemakaian DESC;
+
+-- 3. Tren Pemakaian Obat Rawat Inap per Bulan
+SELECT 
+  EXTRACT(MONTH FROM Tanggal_Pemakaian) AS Bulan,
+  EXTRACT(YEAR FROM Tanggal_Pemakaian) AS Tahun,
+  Nama_Obat,
+  SUM(Jumlah_Unit) AS Total_Unit,
+  SUM(Total_Harga_Pokok) AS Total_Biaya
+FROM `pharmacy_dataset.pemakaian_obat_rawat_inap_2023`
+GROUP BY Bulan, Tahun, Nama_Obat
+ORDER BY Tahun, Bulan, Nama_Obat;
+
+-- 4. Analisis Penjualan Obat Rawat Jalan
+SELECT 
+  Nama_Obat,
+  SUM(Jumlah_Unit) AS Total_Unit_Terjual,
+  SUM(Total_Harga_Pokok) AS Total_Biaya_Pokok,
+  SUM(Total_Harga_Jual) AS Total_Pendapatan,
+  ROUND(SUM(Total_Harga_Jual) - SUM(Total_Harga_Pokok), 2) AS Total_Keuntungan,
+  ROUND((SUM(Total_Harga_Jual) - SUM(Total_Harga_Pokok)) / SUM(Total_Harga_Jual) * 100, 2) AS Margin_Keuntungan_Persen
+FROM `pharmacy_dataset.penjualan_obat_rawat_jalan_2023`
+GROUP BY Nama_Obat
+ORDER BY Total_Pendapatan DESC;
+
+-- 5. Analisis Gabungan: Total Biaya dan Pendapatan dari Pemakaian dan Penjualan
+WITH Pemakaian AS (
+  SELECT 
+    Nama_Obat,
+    SUM(Total_Harga_Pokok) AS Total_Biaya_Pemakaian
+  FROM `pharmacy_dataset.pemakaian_obat_rawat_inap_2023`
+  GROUP BY Nama_Obat
+),
+Penjualan AS (
+  SELECT 
+    Nama_Obat,
+    SUM(Total_Harga_Pokok) AS Total_Biaya_Penjualan,
+    SUM(Total_Harga_Jual) AS Total_Pendapatan_Penjualan
+  FROM `pharmacy_dataset.penjualan_obat_rawat_jalan_2023`
+  GROUP BY Nama_Obat
+)
+SELECT 
+  p.Nama_Obat,
+  COALESCE(pm.Total_Biaya_Pemakaian, 0) AS Total_Biaya_Pemakaian,
+  COALESCE(pj.Total_Biaya_Penjualan, 0) AS Total_Biaya_Penjualan,
+  COALESCE(pj.Total_Pendapatan_Penjualan, 0) AS Total_Pendapatan_Penjualan,
+  COALESCE(pj.Total_Pendapatan_Penjualan, 0) - (COALESCE(pm.Total_Biaya_Pemakaian, 0) + COALESCE(pj.Total_Biaya_Penjualan, 0)) AS Net_Keuntungan
+FROM `pharmacy_dataset.persediaan_farmasi_2023` p
+LEFT JOIN Pemakaian pm ON p.Nama_Obat = pm.Nama_Obat
+LEFT JOIN Penjualan pj ON p.Nama_Obat = pj.Nama_Obat
+GROUP BY p.Nama_Obat, pm.Total_Biaya_Pemakaian, pj.Total_Biaya_Penjualan, pj.Total_Pendapatan_Penjualan
+ORDER BY Net_Keuntungan DESC;
